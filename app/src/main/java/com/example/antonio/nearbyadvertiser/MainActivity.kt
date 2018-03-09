@@ -23,13 +23,11 @@ import org.jetbrains.anko.sdk25.coroutines.onClick
 
 class MainActivity : AppCompatActivity() {
 
-    lateinit var GoogleClient: GoogleApiClient
-
     var ConnectionCallback = IoTNearbyConnectionCallback(this)
 
     var payloadCallback= IoTPayloadCallback(this)
 
-    var googleApiClientCallback= IoTGoogleApiClientCallback(this)
+    lateinit var nearbyClient:ConnectionsClient
 
     lateinit var eventsListViewAdapter: ArrayAdapter<String>
 
@@ -47,7 +45,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        GoogleClient = GoogleApiClient.Builder(this, googleApiClientCallback, googleApiClientCallback).addApi(Nearby.CONNECTIONS_API).build()
+        eventsListViewAdapter= ArrayAdapter(this,android.R.layout.simple_list_item_1)
+
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -56,10 +55,9 @@ class MainActivity : AppCompatActivity() {
                     arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION),
                     MY_PERMISSIONS_REQUEST_COARSE_LOCATION)
         }else{
-            GoogleClient.connect()
+            nearbyClient = Nearby.getConnectionsClient(this)
+            onGoogleApiResult(true)
         }
-
-        eventsListViewAdapter= ArrayAdapter(this,android.R.layout.simple_list_item_1)
 
         constraintLayout {
 
@@ -75,7 +73,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 sendButton = button("Send") {
-                    onClick { Nearby.Connections.sendPayload(GoogleClient, RaspberryID, Payload.fromBytes(editTextxx.text.toString().toByteArray())) }
+                    onClick { nearbyClient.sendPayload( RaspberryID, Payload.fromBytes(editTextxx.text.toString().toByteArray())) }
                     isClickable=false
                     isActivated=false
                 }
@@ -112,8 +110,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-        Nearby.Connections.stopAdvertising(GoogleClient)
-        GoogleClient.disconnect();
+        nearbyClient.stopAdvertising()
     }
 
     override fun onRequestPermissionsResult(requestCode: Int,
@@ -122,7 +119,8 @@ class MainActivity : AppCompatActivity() {
             MY_PERMISSIONS_REQUEST_COARSE_LOCATION -> {
                 // If request is cancelled, the result arrays are empty.
                 if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-                    GoogleClient.connect()
+                    nearbyClient = Nearby.getConnectionsClient(this)
+                    onGoogleApiResult(true)
                     // permission was granted, yay! Do the
                     // contacts-related task you need to do.
 
@@ -147,10 +145,10 @@ class MainActivity : AppCompatActivity() {
     fun onGoogleApiResult(success:Boolean){
         if(success) {
             eventsListViewAdapter.add("Google Api Connected!")
-            Nearby.Connections.startAdvertising(GoogleClient,"Cellphone", "Raspberry", ConnectionCallback, AdvertisingOptions(Strategy.P2P_CLUSTER)).setResultCallback {
+            nearbyClient.startAdvertising("Cellphone", "Raspberry", ConnectionCallback, AdvertisingOptions(Strategy.P2P_CLUSTER)).addOnSuccessListener {
                 startAdvertisingResult ->
-                Log.d(TAG,startAdvertisingResult.localEndpointName)
-                eventsListViewAdapter.add("Advertising With Name:${startAdvertisingResult.localEndpointName}")
+               // Log.d(TAG,startAdvertisingResult.localEndpointName)
+                eventsListViewAdapter.add("Advertising")
             }
         }else{
             Log.e(TAG, "Error!")

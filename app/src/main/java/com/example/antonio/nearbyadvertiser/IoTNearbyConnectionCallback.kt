@@ -31,6 +31,6 @@ class IoTNearbyConnectionCallback(var mainActivity: MainActivity):ConnectionLife
 
     override fun onConnectionInitiated(p0: String?, p1: ConnectionInfo?) {
         Log.d(TAG, "Connection initialized!")
-        Nearby.Connections.acceptConnection(mainActivity.GoogleClient, p0, mainActivity.payloadCallback);
+        mainActivity.nearbyClient.acceptConnection(p0!!, mainActivity.payloadCallback);
     }
 }
